@@ -11,10 +11,10 @@
   /* Layout: mapa ocupa a tela; painel lateral à direita (embaixo no celular) */
   :root {
     --bg: #f6f6f3; --panel: #ffffff; --fg: #1d1d1b; --muted: #6b6a63; --line: #e2e1da; --accent: #2a78d6;
-    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --serif: "IBM Plex Serif", Georgia, serif;
+    --circ-fill: rgba(29, 29, 27, 0.16); --circ-line: #1d1d1b; --circ-neg: #e34948; --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --serif: "IBM Plex Serif", Georgia, serif;
   }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161615; --panel: #1f1f1d; --fg: #f2f1ea; --muted: #a9a89f; --line: #34332f; --accent: #3987e5; color-scheme: dark; } }
-  :root[data-theme="dark"] { --bg: #161615; --panel: #1f1f1d; --fg: #f2f1ea; --muted: #a9a89f; --line: #34332f; --accent: #3987e5; color-scheme: dark; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161615; --panel: #1f1f1d; --fg: #f2f1ea; --muted: #a9a89f; --line: #34332f; --accent: #3987e5; --circ-fill: rgba(242, 241, 234, 0.1); --circ-line: #f2f1ea; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #161615; --panel: #1f1f1d; --fg: #f2f1ea; --muted: #a9a89f; --line: #34332f; --accent: #3987e5; --circ-fill: rgba(242, 241, 234, 0.16); --circ-line: #f2f1ea; color-scheme: dark; }
   html, body { height: 100%; margin: 0; }
   body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; display: grid; grid-template-rows: auto 1fr; }
   header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -58,6 +58,9 @@
   .pp .links { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; }
   .pp a { color: var(--accent); }
   .tt { font-family: var(--sans); font-size: 12px; }
+  #leg-circ circle { fill: var(--circ-fill); stroke: var(--circ-line); }
+  #leg-circ text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+
 </style>
 </head>
 <body>
@@ -73,6 +76,12 @@
       <option value="rec">Ausentes recuperáveis</option>
       <option value="dist">Distância até o local</option>
     </select>
+    <label class="note" for="circ-on" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="circ-on" checked> Círculos</label>
+    <select id="circ" aria-label="O que os círculos medem">
+      <option value="rec">Ausentes recuperáveis</option>
+      <option value="saldo">Saldo potencial para Lula</option>
+      <option value="todos">Ausentes + brancos e nulos</option>
+    </select>
   </div>
 </header>
 <main>
@@ -82,6 +91,11 @@
       <h2 id="leg-tit">Motivo provável</h2>
       <div id="legenda" class="leg"></div>
     </div>
+    <div id="leg-circ-box">
+      <h2 id="leg-circ-tit">Círculos: ausentes recuperáveis</h2>
+      <p class="note" id="leg-circ-nota"></p>
+      <svg id="leg-circ" width="100%" height="90" role="img" aria-label="Legenda dos círculos"></svg>
+    </div>
     <div>
       <h2>Nesta área</h2>
       <p class="note" id="area-nota">Aproxime o mapa para ver os locais de votação sobre as ruas.</p>
@@ -90,6 +104,7 @@
         <option value="rec">Mais ausentes recuperáveis</option>
         <option value="acima">Mais acima do esperado</option>
         <option value="saldo">Maior saldo para Lula</option>
+        <option value="todos">Mais ausentes + brancos e nulos</option>
       </select>
       <ol id="lista"></ol>
     </div>
@@ -128,7 +143,12 @@
     rec: { tit: 'Ausentes recuperáveis', f: (d) => seq(cl(Math.log10(Math.max(d.rec, 1)) / (d.isMun ? 5 : 3))), a: 'poucos', b: 'muitos', r: seq },
     dist: { tit: 'Distância média até o local', f: (d) => (d.dist == null ? '#9a9990' : seq(cl(Math.log(Math.max(d.dist, 0.2) / 0.2) / Math.log(25)))), a: '0,2 km', b: '5 km ou mais', r: seq },
   };
-  let modo = 'motivo', ord = 'rec';
+  let modo = 'motivo', ord = 'rec', circ = 'rec', circOn = true;
+  const CIRC = { rec: 'ausentes recuperáveis', saldo: 'saldo potencial para Lula', todos: 'ausentes + brancos e nulos' };
+  const valor = (d, k) => (k === 'saldo' ? d.saldo : k === 'todos' ? d.ab + d.bnq : d.rec);
+  // área proporcional ao valor: raio = k·√valor; a área dobra a cada nível de zoom (raio ×√2)
+  const escalaK = () => { const z = map.getZoom(); return z < Z_LOCAIS ? 0.03 * Math.pow(2, (z - 4.5) / 2) : 0.28 * Math.pow(2, (Math.min(z, 15) - 10) / 2); };
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const corDe = (d) => (modo === 'motivo' ? cor(d.dom) : ESCALA[modo].f(d));
 
   // mapa base: OpenStreetMap, estilo Humanitarian (HOT), servido pela OSM France: ruas e bairros com nome
@@ -138,10 +158,12 @@
     attribution: '&copy; colaboradores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, estilo Humanitarian OSM Team, servido por OSM France · TSE · IBGE',
   }).addTo(map);
   const canvas = L.canvas({ padding: 0.3 });
+  const circulos = L.layerGroup().addTo(map);
+  const munCentro = [];
 
   // municípios
   const geo = topojson.feature(window.TOPO, window.TOPO.objects.BRMU);
-  geo.features.forEach((f) => { const m = window.MUN[f.properties.codarea]; f.properties.m = m; if (m) m.isMun = true; });
+  geo.features.forEach((f) => { const m = window.MUN[f.properties.codarea]; f.properties.m = m; if (m) { m.isMun = true; m.ab = Math.round(m.ap * m.t / 100); m.saldo = Math.round(m.rec * (m.l - m.f) / 100); } });
   const UFCOD = { 11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO', 21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA', 31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP', 41: 'PR', 42: 'SC', 43: 'RS', 50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF' };
   const munLayer = L.geoJSON(geo, {
     renderer: canvas,
@@ -155,6 +177,47 @@
   const ufBounds = {};
   munLayer.eachLayer((l) => { const uf = UFCOD[l.feature.properties.codarea.slice(0, 2)]; ufBounds[uf] = ufBounds[uf] ? ufBounds[uf].extend(l.getBounds()) : L.latLngBounds(l.getBounds().getSouthWest(), l.getBounds().getNorthEast()); });
 
+  munLayer.eachLayer((l) => { const m = l.feature.properties.m; if (m) munCentro.push([m, l.getBounds().getCenter(), l]); });
+  const fmtC = (v) => (Math.abs(v) >= 1e6 ? nf1.format(v / 1e6) + ' mi' : Math.abs(v) >= 1e4 ? nf.format(Math.round(v / 1e3)) + ' mil' : nf.format(v));
+  const desenhaCirculos = (itens, ehMun) => {
+    circulos.clearLayers();
+    if (!circOn) return;
+    const k = escalaK(), linha = css('--circ-line'), fill = css('--circ-fill'), neg = css('--circ-neg');
+    itens.map(([d, ll]) => [d, ll, valor(d, circ)]).filter(([, , v]) => v != null && (!ehMun || v !== 0))
+      .sort((a, b) => Math.abs(b[2]) - Math.abs(a[2]))
+      .forEach(([d, ll, v]) => {
+        let r = k * Math.sqrt(Math.abs(v)); if (ehMun && r < 3) return; if (!ehMun) r = Math.max(r, 2.5);
+        const c = ehMun
+          ? L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : linha, weight: 1, opacity: 0.75, fillColor: v < 0 ? neg : linha, fillOpacity: v < 0 ? 0.04 : 0.08, dashArray: v < 0 ? '3 3' : null })
+          // no nível dos locais o círculo é o próprio local: área = votos possíveis, cor = motivo/escala escolhida
+          : L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : css('--panel'), weight: v < 0 ? 1.5 : 1, dashArray: v < 0 ? '3 3' : null, fillColor: corDe(d), fillOpacity: v < 0 ? 0.15 : 0.62 })
+            .bindTooltip(`<div class="tt"><b>${esc(d.nm)}</b><br>${fmtC(v)} ${CIRC[circ]} · ${nf1.format(d.t)}% faltaram</div>`)
+            .bindPopup(() => popup(d), { maxWidth: 320 });
+        if (ehMun) c.bindTooltip(`<div class="tt"><b>${esc(d.n)} · ${d.uf}</b><br>${fmtC(v)} ${CIRC[circ]}</div>`, { sticky: true }).on('click', () => map.fitBounds(itens.find((x) => x[0] === d)[2].getBounds(), { maxZoom: 13 }));
+        c.addTo(circulos);
+      });
+    legendaCirc(k);
+  };
+  const legendaCirc = (k) => {
+    document.getElementById('leg-circ-box').hidden = !circOn;
+    document.getElementById('leg-circ-tit').textContent = 'Círculos: ' + CIRC[circ];
+    document.getElementById('leg-circ-nota').textContent = (map.getZoom() < Z_LOCAIS ? 'Um círculo por município.' : 'Um círculo por local de votação.') + ' A área é proporcional ao número.' + (circ === 'saldo' ? ' Tracejado vermelho: Flávio à frente (saldo negativo).' : '');
+    const svg = document.getElementById('leg-circ'); svg.replaceChildren();
+    const W = svg.clientWidth || 300;
+    const nice = (x) => { const p = Math.pow(10, Math.floor(Math.log10(x))); return [1, 2, 5].map((m) => m * p).reverse().find((v) => v <= x) || p; };
+    let vmax = nice(Math.pow(40 / k, 2)), vals = [vmax, nice(vmax / 6), nice(vmax / 40)].filter((v, i, a) => a.indexOf(v) === i);
+    // círculos lado a lado, apoiados na mesma base, com o valor embaixo
+    const ns = 'http://www.w3.org/2000/svg', rmax = k * Math.sqrt(vals[0]), base = 4 + 2 * rmax;
+    svg.setAttribute('height', base + 20);
+    let x = 4;
+    vals.forEach((v) => {
+      const r = k * Math.sqrt(v), cx = x + Math.max(r, 18);
+      const c = document.createElementNS(ns, 'circle'); c.setAttribute('cx', cx); c.setAttribute('cy', base - r); c.setAttribute('r', r); svg.append(c);
+      const t = document.createElementNS(ns, 'text'); t.setAttribute('x', cx); t.setAttribute('y', base + 15); t.setAttribute('text-anchor', 'middle'); t.textContent = fmtC(v); svg.append(t);
+      x = cx + Math.max(r, 18) + 14;
+    });
+  };
+
   const estiloMun = () => {
     const z = map.getZoom();
     const op = z < 9 ? 0.72 : z < 11 ? 0.35 : z < 13 ? 0.12 : 0;
@@ -165,12 +228,13 @@
   const Z_LOCAIS = 10;
   const carregados = {}, pedidos = {};
   const pontos = L.layerGroup().addTo(map);
+
   let todos = [];
   window.__locais = (uf, c) => {
     const rows = c.nr.map((_, i) => ({ uf, mun: c.mun[i], mn: c.mn[i], z: c.z[i], nm: c.nm[i], end: c.end[i], lat: c.lat[i], lon: c.lon[i], ap: c.ap[i], ab: c.ab[i],
       t: c.t[i], e: c.e[i], rec: c.rec[i], l: c.l[i], f: c.f[i], bn: c.bn[i], dom: c.dom[i], dist: c.dist[i] }));
     const amax = Math.max(...rows.map((r) => r.ap));
-    rows.forEach((r) => { r.rel = Math.sqrt(r.ap / amax); r.saldo = Math.round(r.rec * (r.l - r.f) / 100); });
+    rows.forEach((r) => { r.rel = Math.sqrt(r.ap / amax); r.saldo = Math.round(r.rec * (r.l - r.f) / 100); r.bnq = Math.round(r.bn / 100 * (r.ap - r.ab)); });
     carregados[uf] = rows; todos = Object.values(carregados).flat();
     desenha();
   };
@@ -202,17 +266,20 @@
     const nota = document.getElementById('area-nota'), lista = document.getElementById('lista');
     if (z < Z_LOCAIS) {
       nota.textContent = 'Aproxime o mapa para ver os locais de votação sobre as ruas.';
-      lista.replaceChildren(); return;
+      lista.replaceChildren();
+      desenhaCirculos(munCentro.filter(([, ll]) => b.pad(0.2).contains(ll)).map(([m, ll, l]) => [m, ll, l]), true);
+      return;
     }
     Object.entries(ufBounds).forEach(([uf, ub]) => { if (ub.intersects(b)) carrega(uf); });
     const vis = todos.filter((r) => b.contains([r.lat, r.lon]));
-    vis.slice().sort((a, c) => c.ap - a.ap).forEach((r) => {
+    desenhaCirculos(vis.map((r) => [r, [r.lat, r.lon]]), false);  // antes dos pontos, para ficarem por baixo
+    if (!circOn) vis.slice().sort((a, c) => c.ap - a.ap).forEach((r) => {
       L.circleMarker([r.lat, r.lon], { renderer: canvas, radius: raio(r), color: '#ffffff', weight: 1, fillColor: corDe(r), fillOpacity: 0.9 })
         .bindTooltip(`<div class="tt"><b>${esc(r.nm)}</b><br>${nf1.format(r.t)}% de abstenção · ${nf.format(r.rec)} recuperáveis</div>`)
         .bindPopup(() => popup(r), { maxWidth: 320 })
         .addTo(pontos);
     });
-    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : r.rec);
+    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : r.rec);
     const top = vis.slice().sort((a, c) => val(c) - val(a)).slice(0, 25);
     nota.textContent = vis.length ? `${nf.format(vis.length)} locais de votação visíveis. Os 25 primeiros:` : 'Carregando locais de votação…';
     lista.replaceChildren(...top.map((r) => {
@@ -245,6 +312,8 @@
 
   document.getElementById('modo').addEventListener('change', (e) => { modo = e.target.value; legenda(); desenha(); });
   document.getElementById('ord').addEventListener('change', (e) => { ord = e.target.value; desenha(); });
+  document.getElementById('circ').addEventListener('change', (e) => { circ = e.target.value; const o = document.getElementById('ord'); if ([...o.options].some((x) => x.value === circ)) { o.value = circ; ord = circ; } desenha(); });
+  document.getElementById('circ-on').addEventListener('change', (e) => { circOn = e.target.checked; desenha(); });
   map.on('moveend zoomend', desenha);
 
   // busca: município, depois local de votação já carregado, depois endereço (Nominatim/OpenStreetMap)
