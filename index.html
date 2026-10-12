@@ -186,14 +186,14 @@
     itens.map(([d, ll]) => [d, ll, valor(d, circ)]).filter(([, , v]) => v != null && (!ehMun || v !== 0))
       .sort((a, b) => Math.abs(b[2]) - Math.abs(a[2]))
       .forEach(([d, ll, v]) => {
-        let r = k * Math.sqrt(Math.abs(v)); if (ehMun && r < 3) return; if (!ehMun) r = Math.max(r, 2.5);
+        let r = k * Math.sqrt(Math.abs(v)); if (ehMun && r < 2) return; if (!ehMun) r = Math.max(r, 2.5);
         const c = ehMun
-          ? L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : linha, weight: 1, opacity: 0.75, fillColor: v < 0 ? neg : linha, fillOpacity: v < 0 ? 0.04 : 0.08, dashArray: v < 0 ? '3 3' : null })
+          ? L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : css('--panel'), weight: v < 0 ? 1.5 : 0.8, dashArray: v < 0 ? '3 3' : null, fillColor: corDe(d), fillOpacity: v < 0 ? 0.12 : 0.7 })
           // no nível dos locais o círculo é o próprio local: área = votos possíveis, cor = motivo/escala escolhida
           : L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : css('--panel'), weight: v < 0 ? 1.5 : 1, dashArray: v < 0 ? '3 3' : null, fillColor: corDe(d), fillOpacity: v < 0 ? 0.15 : 0.62 })
             .bindTooltip(`<div class="tt"><b>${esc(d.nm)}</b><br>${fmtC(v)} ${CIRC[circ]} · ${nf1.format(d.t)}% faltaram</div>`)
             .bindPopup(() => popup(d), { maxWidth: 320 });
-        if (ehMun) c.bindTooltip(`<div class="tt"><b>${esc(d.n)} · ${d.uf}</b><br>${fmtC(v)} ${CIRC[circ]}</div>`, { sticky: true }).on('click', () => map.fitBounds(itens.find((x) => x[0] === d)[2].getBounds(), { maxZoom: 13 }));
+        if (ehMun) c.bindTooltip(`<div class="tt"><b>${esc(d.n)} · ${d.uf}</b><br>${fmtC(v)} ${CIRC[circ]}<br>${modo === 'motivo' ? MOT[d.dom][0] : nf1.format(d.t) + '% faltaram'}</div>`, { sticky: true }).on('click', () => map.fitBounds(itens.find((x) => x[0] === d)[2].getBounds(), { maxZoom: 13 }));
         c.addTo(circulos);
       });
     legendaCirc(k);
@@ -220,6 +220,10 @@
 
   const estiloMun = () => {
     const z = map.getZoom();
+    if (circOn) {  // com círculos, a cor vai para eles; o município vira só contorno
+      munLayer.setStyle({ color: z >= 11 ? '#5b5a54' : '#8a897f', weight: z >= 11 ? 1.2 : 0.35, opacity: z >= 11 ? 0.6 : 0.5, fillColor: '#8a897f', fillOpacity: z < 9 ? 0.06 : 0 });
+      return;
+    }
     const op = z < 9 ? 0.72 : z < 11 ? 0.35 : z < 13 ? 0.12 : 0;
     munLayer.setStyle((f) => ({ color: z >= 11 ? '#5b5a54' : '#ffffff', weight: z >= 11 ? 1.2 : 0.4, opacity: z >= 11 ? 0.6 : 1, fillOpacity: op, fillColor: f.properties.m ? corDe(f.properties.m) : '#9a9990' }));
   };
