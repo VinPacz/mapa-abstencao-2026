@@ -31,7 +31,8 @@
   aside h2 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: .02em; }
   .note { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 0; }
   .leg { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-  .leg span { display: flex; align-items: center; gap: 6px; }
+  .leg span { display: grid; grid-template-columns: 11px 1fr; gap: 0 6px; align-items: center; }
+  .leg small { grid-column: 2; color: var(--muted); font-size: 11px; line-height: 1.35; margin-bottom: 3px; }
   .leg i { width: 11px; height: 11px; border-radius: 50%; flex: none; }
   .ramp { height: 8px; border-radius: 4px; }
   .ramp-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
@@ -130,6 +131,17 @@
     distancia: ['Distância até o local', 'Informar o transporte público gratuito, onde houver. Partidos não podem levar eleitor.'],
     pobreza: ['Pobreza', 'Lembrar o horário (8h às 17h) para quem trabalha no domingo.'],
     abaixo: ['Nenhum fator acima da média', 'Sem causa dominante; priorize pelos recuperáveis.'],
+  };
+  const DESC = {
+    local: 'Falta mais do que idade, escolaridade, cadastro e distância explicam: fatores locais como política e mobilização. Onde conversa faz mais diferença.',
+    saude_idade: 'Mais eleitores de 70+ (voto facultativo), com deficiência ou em seção sem acessibilidade.',
+    escolaridade: 'Mais analfabetos (voto facultativo) e quem não terminou o fundamental.',
+    urbano: 'Cidade mais urbana, vizinhança com menos laços.',
+    jovens: 'Mais eleitores de 18 a 29, o grupo obrigado a votar que mais falta.',
+    mobilidade: 'Sem biometria, casas de veraneio ou vazias: inscritos que moram em outro lugar.',
+    distancia: 'Casas longe do local de votação (endereços do Censo).',
+    pobreza: 'Mais famílias no Bolsa Família.',
+    abaixo: 'Nenhum fator puxa a abstenção acima da média nacional.',
   };
   const cor = (k) => (ORDEM.includes(k) ? CORES[ORDEM.indexOf(k)] : '#9a9990');
   const lerp = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
@@ -306,7 +318,7 @@
     document.getElementById('leg-tit').textContent = ESCALA[modo].tit;
     const el = document.getElementById('legenda'); el.replaceChildren();
     if (modo === 'motivo') {
-      [...ORDEM, 'abaixo'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = cor(k); s.append(i, MOT[k][0]); el.append(s); });
+      [...ORDEM, 'abaixo'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = cor(k); const t = document.createElement('b'); t.style.fontWeight = 500; t.textContent = MOT[k][0]; const d = document.createElement('small'); d.textContent = DESC[k]; s.append(i, t, d); el.append(s); });
     } else {
       const r = document.createElement('div'); r.className = 'ramp'; r.style.background = `linear-gradient(90deg, ${[0, .25, .5, .75, 1].map(ESCALA[modo].r).join(',')})`;
       const l = document.createElement('div'); l.className = 'ramp-l'; const a = document.createElement('span'), b = document.createElement('span'); a.textContent = ESCALA[modo].a; b.textContent = ESCALA[modo].b; l.append(a, b);
