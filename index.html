@@ -109,7 +109,7 @@
       </select>
       <ol id="lista"></ol>
     </div>
-    <p class="note">Abstenção do 1º turno de 2026 (TSE) por local de votação. "Esperada" é o que o perfil do eleitorado, o cadastro e a distância preveem. Recuperáveis = ausentes menos os esperados entre idosos de 70+. Saldo para Lula supõe que quem faltou vota como os vizinhos que votaram. Distância: média dos domicílios do Censo 2022 até este local, em linha reta.</p>
+    <p class="note">Abstenção do 1º turno de 2026 (TSE) por local de votação. "Esperada" é o que o perfil do eleitorado, o cadastro e a distância preveem. Recuperáveis = ausentes menos os esperados entre idosos de 70+. Saldo para Lula supõe que quem faltou vota como os vizinhos que votaram. Distância: média dos domicílios do Censo 2022 até este local, em linha reta. Método completo na <a href="https://claude.ai/artifact/6wn3irNHK3mh13BTgGKgvo" target="_blank" rel="noopener">nota técnica</a>.</p>
   </aside>
 </main>
 
@@ -133,15 +133,15 @@
     abaixo: ['Nenhum fator acima da média', 'Sem causa dominante; priorize pelos recuperáveis.'],
   };
   const DESC = {
-    local: 'Falta mais do que idade, escolaridade, cadastro e distância explicam: fatores locais como política e mobilização. Onde conversa faz mais diferença.',
-    saude_idade: 'Mais eleitores de 70+ (voto facultativo), com deficiência ou em seção sem acessibilidade.',
-    escolaridade: 'Mais analfabetos (voto facultativo) e quem não terminou o fundamental.',
-    urbano: 'Cidade mais urbana, vizinhança com menos laços.',
-    jovens: 'Mais eleitores de 18 a 29, o grupo obrigado a votar que mais falta.',
-    mobilidade: 'Sem biometria, casas de veraneio ou vazias: inscritos que moram em outro lugar.',
-    distancia: 'Casas longe do local de votação (endereços do Censo).',
-    pobreza: 'Mais famílias no Bolsa Família.',
-    abaixo: 'Nenhum fator puxa a abstenção acima da média nacional.',
+    local: 'Falta mais do que o perfil e o lugar explicam. A causa não aparece em nenhum dado (política local, pouca mobilização, transporte no dia). É onde conversa faz mais diferença.',
+    saude_idade: 'Muitos eleitores com 70 anos ou mais, para quem votar é opcional, ou com deficiência.',
+    escolaridade: 'Muitos eleitores analfabetos (voto opcional) ou que não terminaram o fundamental.',
+    urbano: 'Cidade grande e urbana: menos pressão de vizinhos e conhecidos para votar.',
+    jovens: 'Muitos eleitores de 18 a 29 anos, a faixa obrigada a votar que mais falta.',
+    mobilidade: 'Muitos eleitores sem biometria, casas de veraneio ou vazias: inscritos que mudaram ou moram fora.',
+    distancia: 'Casas longe do local de votação. Efeito pequeno.',
+    pobreza: 'Muitas famílias no Bolsa Família. Efeito quase nulo.',
+    abaixo: 'Nenhum fator puxa a abstenção acima da média do país.',
   };
   const cor = (k) => (ORDEM.includes(k) ? CORES[ORDEM.indexOf(k)] : '#9a9990');
   const lerp = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
