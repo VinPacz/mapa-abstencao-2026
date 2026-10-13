@@ -59,6 +59,12 @@
   .pp .links { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; }
   .pp a { color: var(--accent); }
   .tt { font-family: var(--sans); font-size: 12px; }
+  .pp table.segt { width: 100%; border-collapse: collapse; margin: 8px 0 2px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .pp .segt th { text-align: right; color: var(--muted); font-weight: 500; padding: 2px 4px; border-bottom: 1px solid var(--line); }
+  .pp .segt th:first-child, .pp .segt td:first-child { text-align: left; }
+  .pp .segt td { text-align: right; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+  .pp .segt td i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .pp .segt .pos { color: #2a78d6; font-weight: 600; } .pp .segt .neg { color: #e34948; } .pp .segt .muted { color: var(--muted); }
   #leg-circ circle { fill: var(--circ-fill); stroke: var(--circ-line); }
   #leg-circ text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
 
@@ -72,6 +78,7 @@
     <label for="modo" class="note">Cor</label>
     <select id="modo">
       <option value="motivo">Motivo provável</option>
+      <option value="quem">Quem mobilizar (saldo para Lula)</option>
       <option value="taxa">Taxa de abstenção</option>
       <option value="acima">Acima do esperado</option>
       <option value="rec">Ausentes recuperáveis</option>
@@ -82,6 +89,7 @@
       <option value="rec">Ausentes recuperáveis</option>
       <option value="saldo">Saldo potencial para Lula</option>
       <option value="todos">Ausentes + brancos e nulos</option>
+      <option value="disputa">Votos a disputar (terceiros + brancos e nulos)</option>
     </select>
   </div>
 </header>
@@ -107,10 +115,11 @@
         <option value="acima">Mais acima do esperado</option>
         <option value="saldo">Maior saldo para Lula</option>
         <option value="todos">Mais ausentes + brancos e nulos</option>
+        <option value="disputa">Mais votos a disputar</option>
       </select>
       <ol id="lista"></ol>
     </div>
-    <p class="note">Abstenção do 1º turno de 2026 (TSE) por local de votação. "Esperada" é o que o perfil do eleitorado, o cadastro e a distância preveem. Recuperáveis = ausentes menos os esperados entre idosos de 70+. Saldo para Lula supõe que quem faltou vota como os vizinhos que votaram. Distância: média dos domicílios do Censo 2022 até este local, em linha reta. Método completo na <a href="https://claude.ai/artifact/6wn3irNHK3mh13BTgGKgvo" target="_blank" rel="noopener">nota técnica</a>.</p>
+    <p class="note">Abstenção do 1º turno de 2026 (TSE) por local de votação. "Esperada" é o que o perfil do eleitorado, o cadastro e a distância preveem. Recuperáveis = ausentes menos os esperados entre idosos de 70+. Saldo para Lula: ausentes de cada perfil (idade, escolaridade, sexo) × inclinação desse perfil na pesquisa Datafolha de 6 e 7/10, ajustada ao resultado de cada local; é uma estimativa para ordenar lugares, não uma previsão de votos. Votos a disputar: votos em outros candidatos, brancos e nulos no 1º turno. Distância: média dos domicílios do Censo 2022 até este local, em linha reta. Método completo na <a href="https://claude.ai/artifact/6wn3irNHK3mh13BTgGKgvo" target="_blank" rel="noopener">nota técnica</a>.</p>
   </aside>
 </main>
 
@@ -123,7 +132,7 @@
   const ORDEM = ['local', 'saude_idade', 'escolaridade', 'urbano', 'jovens', 'mobilidade', 'distancia', 'pobreza'];
   const CORES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
   const MOT = {
-    local: ['Falta acima do esperado', 'Conversa porta a porta e lembrete na véspera: aqui se falta mais do que o perfil explica.'],
+    local: ['Falta acima do esperado', 'Aqui se falta mais do que o perfil explica: há eleitores que podem votar e não costumam ir. Veja abaixo se trazê-los favorece Lula.'],
     saude_idade: ['Idade avançada e saúde', 'Combinar com a família quem acompanha o idoso; informar se a seção é acessível.'],
     escolaridade: ['Baixa escolaridade', 'Explicar que basta documento com foto ou o e-Título e mostrar onde a pessoa vota.'],
     urbano: ['Grande centro urbano', 'Mobilizar redes que já existem: igreja, trabalho, condomínio, time.'],
@@ -151,18 +160,28 @@
   const cl = (v) => Math.max(0, Math.min(1, v));
   const ESCALA = {
     motivo: { tit: 'Motivo provável' },
+    quem: { tit: 'Quem mobilizar para Lula' },
     taxa: { tit: 'Taxa de abstenção', f: (d) => seq(cl((d.t - 10) / 25)), a: '10%', b: '35% ou mais', r: seq },
     acima: { tit: 'Acima do esperado pelo perfil', f: (d) => div(cl((d.t - d.e + 6) / 12)), a: '6 p.p. abaixo', b: '6 p.p. acima', r: div },
     rec: { tit: 'Ausentes recuperáveis', f: (d) => seq(cl(Math.log10(Math.max(d.rec, 1)) / (d.isMun ? 5 : 3))), a: 'poucos', b: 'muitos', r: seq },
     dist: { tit: 'Distância média até o local', f: (d) => (d.dist == null ? '#9a9990' : seq(cl(Math.log(Math.max(d.dist, 0.2) / 0.2) / Math.log(25)))), a: '0,2 km', b: '5 km ou mais', r: seq },
   };
   let modo = 'motivo', ord = 'rec', circ = 'rec', circOn = true;
-  const CIRC = { rec: 'ausentes recuperáveis', saldo: 'saldo potencial para Lula', todos: 'ausentes + brancos e nulos' };
-  const valor = (d, k) => (k === 'saldo' ? d.saldo : k === 'todos' ? d.ab + d.bnq : d.rec);
+  const CIRC = { rec: 'ausentes recuperáveis', saldo: 'saldo potencial para Lula', todos: 'ausentes + brancos e nulos', disputa: 'votos a disputar' };
+  const valor = (d, k) => (k === 'saldo' ? d.saldo : k === 'todos' ? d.ab + d.bnq : k === 'disputa' ? d.dis : d.rec);
+  // segmentos dos ausentes recuperáveis: quantos são e quanto saldo para Lula renderia trazê-los (margem por perfil da
+  // pesquisa Datafolha de 6-7/10, ajustada ao resultado do próprio local)
+  const SEGS = {
+    jovem: ['Jovens de 16 a 29', '#e87ba4', 'Conversa entre pares e nas redes; combinar de ir votar junto.'],
+    baixa: ['Baixa escolaridade (30 a 69)', '#1baf7a', 'Conversa presencial: onde vota, que documento levar, horário.'],
+    adulto: ['Adultos de 30 a 69', '#2a78d6', 'Lembrete e porta a porta pelas redes do bairro: igreja, trabalho, vizinhos.'],
+    nenhum: ['Trazer ausentes favorece Flávio', '#9a9990', 'Aqui o foco é persuadir quem votou em terceiros, branco ou nulo, não mobilizar ausentes.'],
+  };
+  const quem = (d) => { const z = { jovem: d.zj, baixa: d.zb, adulto: d.za }; const k = Object.keys(z).reduce((a, b) => (z[b] > z[a] ? b : a)); return z[k] > 0 ? k : 'nenhum'; };
   // área proporcional ao valor: raio = k·√valor; a área dobra a cada nível de zoom (raio ×√2)
-  const escalaK = () => { const z = map.getZoom(); return z < Z_LOCAIS ? 0.03 * Math.pow(2, (z - 4.5) / 2) : 0.28 * Math.pow(2, (Math.min(z, 15) - 10) / 2); };
+  const escalaK = () => { const z = map.getZoom(); return z < Z_LOCAIS ? 0.03 * Math.pow(2, (z - 4.5) / 2) : 0.28 * Math.pow(2, (Math.min(z, 13) - 10) / 2); };
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const corDe = (d) => (modo === 'motivo' ? cor(d.dom) : ESCALA[modo].f(d));
+  const corDe = (d) => (modo === 'motivo' ? cor(d.dom) : modo === 'quem' ? SEGS[quem(d)][1] : ESCALA[modo].f(d));
 
   // mapa base: OpenStreetMap, estilo Humanitarian (HOT), servido pela OSM France: ruas e bairros com nome
   const map = L.map('map', { preferCanvas: true, zoomSnap: 0.5 }).setView([-14.5, -52], 4.5);
@@ -176,7 +195,7 @@
 
   // municípios
   const geo = topojson.feature(window.TOPO, window.TOPO.objects.BRMU);
-  geo.features.forEach((f) => { const m = window.MUN[f.properties.codarea]; f.properties.m = m; if (m) { m.isMun = true; m.ab = Math.round(m.ap * m.t / 100); m.saldo = Math.round(m.rec * (m.l - m.f) / 100); } });
+  geo.features.forEach((f) => { const m = window.MUN[f.properties.codarea]; f.properties.m = m; if (m) { m.isMun = true; m.ab = Math.round(m.ap * m.t / 100); m.saldo = m.saj; [m.sj, m.sb, m.sa, m.si] = m.seg; [m.zj, m.zb, m.za] = m.sseg; } });
   const UFCOD = { 11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO', 21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA', 31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP', 41: 'PR', 42: 'SC', 43: 'RS', 50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF' };
   const munLayer = L.geoJSON(geo, {
     renderer: canvas,
@@ -249,9 +268,10 @@
   let todos = [];
   window.__locais = (uf, c) => {
     const rows = c.nr.map((_, i) => ({ uf, mun: c.mun[i], mn: c.mn[i], z: c.z[i], nm: c.nm[i], end: c.end[i], lat: c.lat[i], lon: c.lon[i], ap: c.ap[i], ab: c.ab[i],
-      t: c.t[i], e: c.e[i], rec: c.rec[i], l: c.l[i], f: c.f[i], bn: c.bn[i], dom: c.dom[i], dist: c.dist[i] }));
+      t: c.t[i], e: c.e[i], rec: c.rec[i], l: c.l[i], f: c.f[i], bn: c.bn[i], dom: c.dom[i], dist: c.dist[i], ca: c.ca ? c.ca[i] : 0,
+      sj: c.sj[i], sb: c.sb[i], sa: c.sa[i], si: c.si[i], zj: c.zj[i], zb: c.zb[i], za: c.za[i], saj: c.saj[i], dis: c.dis[i], ter: c.ter[i] }));
     const amax = Math.max(...rows.map((r) => r.ap));
-    rows.forEach((r) => { r.rel = Math.sqrt(r.ap / amax); r.saldo = Math.round(r.rec * (r.l - r.f) / 100); r.bnq = Math.round(r.bn / 100 * (r.ap - r.ab)); });
+    rows.forEach((r) => { r.rel = Math.sqrt(r.ap / amax); r.saldo = r.saj; r.bnq = Math.round(r.bn / 100 * (r.ap - r.ab)); });
     carregados[uf] = rows; todos = Object.values(carregados).flat();
     desenha();
   };
@@ -264,13 +284,18 @@
   const raio = (r) => { const z = map.getZoom(); return (2.5 + 7 * r.rel) * (z >= 15 ? 1.5 : z >= 13 ? 1.2 : 0.85); };
   const popup = (r) => {
     const q = encodeURIComponent(`${r.nm}, ${r.end}, ${r.mn} - ${r.uf}`);
-    return `<div class="pp"><h3>${esc(r.nm)}</h3><div class="sub">${esc(r.end)}<br>${esc(r.mn)} · ${r.uf} · zona ${r.z}</div>
+    return `<div class="pp"><h3>${esc(r.nm)}</h3><div class="sub">${esc(r.end)}<br>${esc(r.mn)} · ${r.uf} · zona ${r.z}${r.ca ? '<br><b>Posição aproximada:</b> a coordenada do TSE caía fora do município; o ponto foi colocado no centro da cidade. Use o endereço.' : ''}</div>
       <div class="grid"><div><b>${nf1.format(r.t)}%</b><span>abstenção (esperada ${nf1.format(r.e)}%)</span></div>
       <div><b>${nf.format(r.rec)}</b><span>ausentes recuperáveis de ${nf.format(r.ab)}</span></div>
       <div><b>${nf1.format(r.l)}% · ${nf1.format(r.f)}%</b><span>Lula · Flávio (válidos)</span></div>
       <div><b>${r.dist == null ? '—' : nf1.format(r.dist) + ' km'}</b><span>distância média dos domicílios</span></div></div>
       <span class="chip"><i style="background:${cor(r.dom)}"></i>${MOT[r.dom][0]}</span>
       <p class="acao">${MOT[r.dom][1]}</p>
+      <table class="segt"><tr><th>Ausentes recuperáveis</th><th>pessoas</th><th>saldo Lula</th></tr>
+      ${['jovem', 'baixa', 'adulto'].map((k) => { const n = r['s' + k[0]], z = r['z' + k[0]]; return `<tr><td><i style="background:${SEGS[k][1]}"></i>${SEGS[k][0]}</td><td>${nf.format(n)}</td><td class="${z > 0 ? 'pos' : z < 0 ? 'neg' : ''}">${z > 0 ? '+' : ''}${nf.format(z)}</td></tr>`; }).join('')}
+      <tr><td class="muted">Idosos 70+ (difícil trazer)</td><td class="muted">${nf.format(r.si)}</td><td></td></tr></table>
+      <p class="acao"><b>Quem mobilizar:</b> ${SEGS[quem(r)][0]}. ${SEGS[quem(r)][2]}</p>
+      <p class="acao"><b>Votos a disputar:</b> ${nf.format(r.dis)} (${nf.format(r.ter)} em outros candidatos, ${nf.format(r.dis - r.ter)} brancos e nulos)</p>
       <div class="links"><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">Abrir no Google Maps</a>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lon}" target="_blank" rel="noopener">Como chegar</a></div></div>`;
   };
@@ -296,7 +321,7 @@
         .bindPopup(() => popup(r), { maxWidth: 320 })
         .addTo(pontos);
     });
-    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : r.rec);
+    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : ord === 'disputa' ? r.dis : r.rec);
     const top = vis.slice().sort((a, c) => val(c) - val(a)).slice(0, 25);
     nota.textContent = vis.length ? `${nf.format(vis.length)} locais de votação visíveis. Os 25 primeiros:` : 'Carregando locais de votação…';
     lista.replaceChildren(...top.map((r) => {
@@ -318,7 +343,10 @@
   const legenda = () => {
     document.getElementById('leg-tit').textContent = ESCALA[modo].tit;
     const el = document.getElementById('legenda'); el.replaceChildren();
-    if (modo === 'motivo') {
+    if (modo === 'quem') {
+      ['jovem', 'baixa', 'adulto', 'nenhum'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = SEGS[k][1]; const t = document.createElement('b'); t.style.fontWeight = 500; t.textContent = SEGS[k][0]; const d = document.createElement('small'); d.textContent = SEGS[k][2]; s.append(i, t, d); el.append(s); });
+      const n = document.createElement('small'); n.style.color = 'var(--muted)'; n.textContent = 'Cor = o grupo de ausentes que, se votasse, daria mais saldo para Lula ali (inclinação de cada perfil pela pesquisa Datafolha de 6-7/10, ajustada ao resultado do local).'; el.append(n);
+    } else if (modo === 'motivo') {
       [...ORDEM, 'abaixo'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = cor(k); const t = document.createElement('b'); t.style.fontWeight = 500; t.textContent = MOT[k][0]; const d = document.createElement('small'); d.textContent = DESC[k]; s.append(i, t, d); el.append(s); });
     } else {
       const r = document.createElement('div'); r.className = 'ramp'; r.style.background = `linear-gradient(90deg, ${[0, .25, .5, .75, 1].map(ESCALA[modo].r).join(',')})`;
