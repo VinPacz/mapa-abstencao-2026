@@ -19,11 +19,12 @@
   body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; display: grid; grid-template-rows: auto 1fr; }
   header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); border-bottom: 1px solid var(--line); background: var(--panel); }
   header h1 { font-family: var(--serif); font-weight: 400; font-size: 20px; margin: 0; white-space: nowrap; }
-  header .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 0; }
+  header .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 220px; min-width: 0; }
   select, input, button { font: inherit; font-size: 13px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
   button { cursor: pointer; }
   select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  #busca { flex: 1; min-width: 180px; max-width: 360px; }
+  #busca { flex: 1; min-width: 0; max-width: 360px; }
+  @media (max-width: 480px) { header h1 { font-size: 17px; } #busca { max-width: none; } }
   main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
   #map { min-height: 0; background: var(--bg); }
   aside { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 14px; }
@@ -59,6 +60,23 @@
   .pp .links { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; }
   .pp a { color: var(--accent); }
   .tt { font-family: var(--sans); font-size: 12px; }
+  #map-wrap { position: relative; min-height: 0; } #map-wrap #map { position: absolute; inset: 0; }
+  .dica { position: absolute; left: 12px; bottom: 28px; z-index: 500; max-width: 340px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .dica button { margin-left: 6px; }
+  .perg h2 { margin-bottom: 6px; }
+  #perguntas { display: flex; flex-direction: column; gap: 6px; }
+  #perguntas button { text-align: left; padding: 8px 10px; border-radius: 8px; background: var(--bg); line-height: 1.3; }
+  #perguntas button b { display: block; font-weight: 600; font-size: 13px; }
+  #perguntas button span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  #perguntas button[aria-checked="true"] { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--bg)); padding: 7px 9px; }
+  .explica { font-size: 12.5px; line-height: 1.45; border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+  .explica p { margin: 0 0 4px; } .explica .rot { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: .04em; }
+  details.pers summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 0; }
+  .pp .acao-box { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+  .pp .acao-box b.k { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .pp details { border-top: 1px solid var(--line); padding: 4px 0; }
+  .pp details summary { cursor: pointer; font-weight: 600; font-size: 12.5px; padding: 3px 0; }
+  .pp .tag { display: inline-block; font-size: 11px; border-radius: 999px; padding: 1px 8px; margin-top: 4px; color: #fff; }
   .tabs { display: flex; gap: 4px; position: sticky; top: 0; background: var(--panel); padding-bottom: 6px; z-index: 2; }
   .tabs button { flex: 1; border-radius: 6px; padding: 7px 8px; font-weight: 500; }
   .tabs button[aria-selected="true"] { background: var(--fg); color: var(--panel); border-color: var(--fg); }
@@ -82,30 +100,11 @@
   <h1>Abstenção na rua · 1º turno 2026</h1>
   <div class="ctl">
     <input id="busca" type="search" placeholder="Cidade, bairro, endereço ou escola" aria-label="Buscar">
-    <label for="modo" class="note">Cor</label>
-    <select id="modo">
-      <option value="motivo">Motivo provável</option>
-      <option value="quem">Quem mobilizar (saldo para Lula)</option>
-      <option value="hist">Abstenção desde 2022</option>
-      <option value="taxa">Taxa de abstenção</option>
-      <option value="acima">Acima do esperado</option>
-      <option value="rec">Ausentes recuperáveis</option>
-      <option value="dist">Distância até o local</option>
-    </select>
-    <label class="note" for="circ-on" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="circ-on" checked> Círculos</label>
-    <select id="circ" aria-label="O que os círculos medem">
-      <option value="ganho">Votos a ganhar para Lula (mobilizando)</option>
-      <option value="exlula">Ex-eleitores de Lula ausentes (teto)</option>
-      <option value="novos">Ausentes novos desde 2022</option>
-      <option value="rec">Ausentes recuperáveis</option>
-      <option value="saldo">Saldo potencial para Lula</option>
-      <option value="todos">Ausentes + brancos e nulos</option>
-      <option value="disputa">Votos a disputar (terceiros + brancos e nulos)</option>
-    </select>
   </div>
 </header>
 <main>
-  <div id="map" role="region" aria-label="Mapa"></div>
+  <div id="map-wrap"><div id="map" role="region" aria-label="Mapa"></div>
+    <div id="dica" class="dica" hidden><b>Como usar:</b> escolha uma pergunta ao lado, busque sua cidade e aproxime até o bairro. Clique numa escola para ver o que fazer ali. <button type="button" id="dica-ok">Entendi</button></div></div>
   <aside>
     <div class="tabs" role="tablist">
       <button type="button" role="tab" id="tb-mapa" aria-selected="true">Mapa</button>
@@ -127,7 +126,40 @@
       <ol id="cid-lista" class="cid"></ol>
     </div>
     <div id="pn-mapa">
-    <p class="note" id="totais" style="color:var(--fg)">Segundo o TSE, <b>33.469.244</b> eleitores (21,08%) não votaram no 1º turno, contando o exterior. O mapa mostra os <b>32.894.899</b> que votam no Brasil (20,84% dos aptos daqui); os 574.345 do exterior votam em consulados e não têm local no mapa.</p>
+    <div class="perg" role="radiogroup" aria-labelledby="perg-tit">
+      <h2 id="perg-tit">O que você quer saber?</h2>
+      <div id="perguntas"></div>
+    </div>
+    <div id="explica" class="explica"></div>
+    <details class="pers" id="personalizar">
+      <summary>Personalizar a visualização</summary>
+      <div class="ctl2">
+    <label for="modo" class="note">Cor</label>
+    <select id="modo">
+      <option value="motivo">Motivo provável</option>
+      <option value="quem">Quem mobilizar (saldo para Lula)</option>
+      <option value="hist">Abstenção desde 2022</option>
+      <option value="margem">Quem venceu (Lula × Flávio)</option>
+      <option value="taxa">Taxa de abstenção</option>
+      <option value="acima">Acima do esperado</option>
+      <option value="rec">Ausentes recuperáveis</option>
+      <option value="dist">Distância até o local</option>
+    </select>
+    <label class="note" for="circ"><input type="checkbox" id="circ-on" checked aria-label="Mostrar círculos"> Círculos</label>
+    <select id="circ" aria-label="O que os círculos medem">
+      <option value="ganho">Votos a ganhar para Lula (mobilizando)</option>
+      <option value="exlula">Ex-eleitores de Lula ausentes (teto)</option>
+      <option value="novos">Ausentes novos desde 2022</option>
+      <option value="rec">Ausentes recuperáveis</option>
+      <option value="saldo">Saldo potencial para Lula</option>
+      <option value="todos">Ausentes + brancos e nulos</option>
+      <option value="disputa">Votos a disputar (terceiros + brancos e nulos)</option>
+    </select>
+        <label class="note" for="ord-p">Lista</label>
+        <select id="ord-p"></select>
+      </div>
+    </details>
+    <p class="note" id="totais" hidden style="color:var(--fg)">Segundo o TSE, <b>33.469.244</b> eleitores (21,08%) não votaram no 1º turno, contando o exterior. O mapa mostra os <b>32.894.899</b> que votam no Brasil (20,84% dos aptos daqui); os 574.345 do exterior votam em consulados e não têm local no mapa.</p>
     <div>
       <h2 id="leg-tit">Motivo provável</h2>
       <div id="legenda" class="leg"></div>
@@ -140,8 +172,7 @@
     <div>
       <h2>Nesta área</h2>
       <p class="note" id="area-nota">Aproxime o mapa para ver os locais de votação sobre as ruas.</p>
-      <label for="ord" class="note">Ordenar por </label>
-      <select id="ord">
+      <select id="ord" hidden>
         <option value="ganho">Mais votos a ganhar para Lula</option>
         <option value="exlula">Mais ex-eleitores de Lula ausentes</option>
         <option value="rec">Mais ausentes recuperáveis</option>
@@ -153,7 +184,10 @@
       <ol id="lista"></ol>
     </div>
     </div>
+    <details class="pers"><summary>Sobre os dados</summary>
+    <p class="note" style="color:var(--fg)">Segundo o TSE, <b>33.469.244</b> eleitores (21,08%) não votaram no 1º turno, contando o exterior. O mapa mostra os <b>32.894.899</b> que votam no Brasil (20,84% dos aptos daqui); os 574.345 do exterior votam em consulados e não têm local no mapa.</p>
     <p class="note">Abstenção do 1º turno de 2026 (TSE) por local de votação. "Esperada" é o que o perfil do eleitorado, o cadastro e a distância preveem. Recuperáveis = ausentes menos os esperados entre idosos de 70+. Saldo para Lula: ausentes de cada perfil (idade, escolaridade, sexo) × inclinação desse perfil na pesquisa Datafolha de 6 e 7/10, ajustada ao resultado de cada local; é uma estimativa para ordenar lugares, não uma previsão de votos. Votos a disputar: votos em outros candidatos, brancos e nulos no 1º turno. Distância: média dos domicílios do Censo 2022 até este local, em linha reta. Método completo na <a href="https://claude.ai/artifact/6wn3irNHK3mh13BTgGKgvo" target="_blank" rel="noopener">nota técnica</a>.</p>
+    </details>
   </aside>
 </main>
 
@@ -196,6 +230,7 @@
     motivo: { tit: 'Motivo provável' },
     quem: { tit: 'Quem mobilizar para Lula' },
     hist: { tit: 'Abstenção desde 2022' },
+    margem: { tit: 'Quem venceu no 1º turno', f: (d) => div(cl(((d.f || 0) - (d.l || 0) + 30) / 60)), a: 'Lula +30', b: 'Flávio +30', r: div },
     taxa: { tit: 'Taxa de abstenção', f: (d) => seq(cl((d.t - 10) / 25)), a: '10%', b: '35% ou mais', r: seq },
     acima: { tit: 'Acima do esperado pelo perfil', f: (d) => div(cl((d.t - d.e + 6) / 12)), a: '6 p.p. abaixo', b: '6 p.p. acima', r: div },
     rec: { tit: 'Ausentes recuperáveis', f: (d) => seq(cl(Math.log10(Math.max(d.rec, 1)) / (d.isMun ? 5 : 3))), a: 'poucos', b: 'muitos', r: seq },
@@ -269,7 +304,7 @@
           // no nível dos locais o círculo é o próprio local: área = votos possíveis, cor = motivo/escala escolhida
           : L.circleMarker(ll, { renderer: canvas, radius: r, color: v < 0 ? neg : css('--panel'), weight: v < 0 ? 1.5 : 1, dashArray: v < 0 ? '3 3' : null, fillColor: corDe(d), fillOpacity: v < 0 ? 0.15 : 0.62 })
             .bindTooltip(`<div class="tt"><b>${esc(d.nm)}</b><br>${fmtC(v)} ${CIRC[circ]} · ${nf1.format(d.t)}% faltaram</div>`)
-            .bindPopup(() => popup(d), { maxWidth: 320 });
+            .on('click', () => abrePopup(d));
         if (ehMun) c.bindTooltip(`<div class="tt"><b>${esc(d.n)} · ${d.uf}</b><br>${fmtC(v)} ${CIRC[circ]}<br>${modo === 'motivo' ? MOT[d.dom][0] : nf1.format(d.t) + '% faltaram'}</div>`, { sticky: true }).on('click', () => map.fitBounds(itens.find((x) => x[0] === d)[2].getBounds(), { maxZoom: 13 }));
         c.addTo(circulos);
       });
@@ -330,22 +365,33 @@
   const raio = (r) => { const z = map.getZoom(); return (2.5 + 7 * r.rel) * (z >= 15 ? 1.5 : z >= 13 ? 1.2 : 0.85); };
   const popup = (r) => {
     const q = encodeURIComponent(`${r.nm}, ${r.end}, ${r.mn} - ${r.uf}`);
-    return `<div class="pp"><h3>${esc(r.nm)}</h3><div class="sub">${esc(r.end)}<br>${esc(r.mn)} · ${r.uf} · zona ${r.z}${r.ca ? '<br><b>Posição aproximada:</b> a coordenada do TSE caía fora do município; o ponto foi colocado no centro da cidade. Use o endereço.' : ''}</div>
-      <div class="grid"><div><b>${nf1.format(r.t)}%</b><span>abstenção (esperada ${nf1.format(r.e)}%)</span></div>
-      <div><b>${nf.format(r.rec)}</b><span>ausentes recuperáveis de ${nf.format(r.ab)}</span></div>
-      <div><b>${nf1.format(r.l)}% · ${nf1.format(r.f)}%</b><span>Lula · Flávio (válidos)</span></div>
-      <div><b>${r.dist == null ? '—' : nf1.format(r.dist) + ' km'}</b><span>distância média dos domicílios</span></div></div>
-      <span class="chip"><i style="background:${cor(r.dom)}"></i>${MOT[r.dom][0]}</span>
-      <p class="acao">${MOT[r.dom][1]}</p>
-      <table class="segt"><tr><th>Ausentes recuperáveis</th><th>pessoas</th><th>saldo Lula</th></tr>
-      ${['jovem', 'baixa', 'adulto'].map((k) => { const n = r['s' + k[0]], z = r['z' + k[0]]; return `<tr><td><i style="background:${SEGS[k][1]}"></i>${SEGS[k][0]}</td><td>${nf.format(n)}</td><td class="${z > 0 ? 'pos' : z < 0 ? 'neg' : ''}">${z > 0 ? '+' : ''}${nf.format(z)}</td></tr>`; }).join('')}
-      <tr><td class="muted">Idosos 70+ (difícil trazer)</td><td class="muted">${nf.format(r.si)}</td><td></td></tr></table>
-      ${r.t22 == null ? '<p class="acao"><b>2022:</b> sem histórico comparável para este local.</p>' : `<p class="acao"><b>Desde 2022:</b> abstenção ${nf1.format(r.t22)}% → ${nf1.format(r.t)}% (Lula tinha ${nf1.format(r.l22)}% em 2022). Variação descontado o perfil e o acaso: ${r.hd > 0 ? '+' : ''}${nf1.format(r.hd)} p.p. · <i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HIST[classe(r)][1]}"></i> ${HIST[classe(r)][0]}.<br>Ausentes novos: ${nf.format(r.nov)} · ex-eleitores de Lula ausentes (teto): ${nf.format(r.exl)}${r.r2t == null ? '' : ` · no 2º turno de 2022 a abstenção ${r.r2t < 0 ? 'caiu' : 'subiu'} ${nf1.format(Math.abs(r.r2t))} p.p.`}</p>`}
-      <p class="acao"><b>Votos a ganhar mobilizando:</b> ${nf.format(r.gan)} (soma dos grupos com saldo positivo)</p>
-      <p class="acao"><b>Quem mobilizar:</b> ${SEGS[quem(r)][0]}. ${SEGS[quem(r)][2]}</p>
-      <p class="acao"><b>Votos a disputar:</b> ${nf.format(r.dis)} (${nf.format(r.ter)} em outros candidatos, ${nf.format(r.dis - r.ter)} brancos e nulos)</p>
+    const k = quem(r), cl2 = classe(r);
+    const acao = r.gan > 0
+      ? `<b class="k">O que fazer aqui</b>Mobilizar <b>${SEGS[k][0].toLowerCase()}</b>: até <b>${nf.format(r.gan)}</b> votos a ganhar para Lula. ${SEGS[k][2]}`
+      : `<b class="k">O que fazer aqui</b>Trazer ausentes favorece Flávio. Foco em <b>persuadir</b> os ${nf.format(r.dis)} que votaram em outros, branco ou nulo.`;
+    const tag = cl2 === 'nova' ? `<span class="tag" style="background:${HIST.nova[1]}">Falta nova desde 2022 · até ${nf.format(r.exl)} ex-eleitores de Lula</span>`
+      : cl2 === 'cronica' ? `<span class="tag" style="background:${HIST.cronica[1]}">Falta crônica: já era alta em 2022</span>` : '';
+    return `<div class="pp"><h3>${esc(r.nm)}</h3><div class="sub">${esc(r.end)} · ${esc(r.mn)} · ${r.uf} · zona ${r.z}${r.ca ? '<br><b>Posição aproximada:</b> use o endereço.' : ''}</div>
+      <div class="acao-box">${acao}${tag ? '<br>' + tag : ''}</div>
+      <div class="grid"><div><b>${nf1.format(r.t)}%</b><span>faltaram (esperado pelo perfil: ${nf1.format(r.e)}%)</span></div>
+      <div><b>${nf1.format(r.l)}% · ${nf1.format(r.f)}%</b><span>Lula · Flávio no 1º turno</span></div>
+      <div><b>${nf.format(r.gan)}</b><span>votos a ganhar mobilizando</span></div>
+      <div><b>${nf.format(r.dis)}</b><span>votos a disputar</span></div></div>
+      <details><summary>Quem são os ausentes</summary>
+      <table class="segt"><tr><th></th><th>pessoas</th><th>saldo Lula</th></tr>
+      ${['jovem', 'baixa', 'adulto'].map((g) => { const n = r['s' + g[0]], z = r['z' + g[0]]; return `<tr><td><i style="background:${SEGS[g][1]}"></i>${SEGS[g][0]}</td><td>${nf.format(n)}</td><td class="${z > 0 ? 'pos' : z < 0 ? 'neg' : ''}">${z > 0 ? '+' : ''}${nf.format(z)}</td></tr>`; }).join('')}
+      <tr><td class="muted">Idosos 70+ (difícil trazer)</td><td class="muted">${nf.format(r.si)}</td><td></td></tr></table></details>
+      <details><summary>Desde 2022</summary>${r.t22 == null ? '<p class="acao">Sem histórico comparável para este local (local novo ou que mudou muito de tamanho).</p>' : `<p class="acao">Abstenção ${nf1.format(r.t22)}% → ${nf1.format(r.t)}%. Lula tinha ${nf1.format(r.l22)}% em 2022. Variação descontado o perfil e o acaso: <b>${r.hd > 0 ? '+' : ''}${nf1.format(r.hd)} ponto</b> (${HIST[cl2][0].toLowerCase()}).<br>Ausentes novos: ${nf.format(r.nov)} · ex-eleitores de Lula ausentes (teto): ${nf.format(r.exl)}${r.r2t == null ? '' : `<br>No 2º turno de 2022 a abstenção ${r.r2t < 0 ? 'caiu' : 'subiu'} ${nf1.format(Math.abs(r.r2t))} ponto aqui.`}</p>`}</details>
+      <details><summary>Por que se falta aqui</summary><p class="acao"><span class="chip"><i style="background:${cor(r.dom)}"></i>${MOT[r.dom][0]}</span><br>${MOT[r.dom][1]}${r.dist == null ? '' : `<br>Distância média das casas até aqui: ${nf1.format(r.dist)} km.`}</p></details>
       <div class="links"><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">Abrir no Google Maps</a>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lon}" target="_blank" rel="noopener">Como chegar</a></div></div>`;
+  };
+  // popup solto (não preso ao círculo): o redesenho a cada movimento do mapa não o fecha
+  const abrePopup = (r) => {
+    const el = document.createElement('div'); el.innerHTML = popup(r);
+    const pp = L.popup({ maxWidth: 320, autoPanPaddingTopLeft: [10, 60] }).setLatLng([r.lat, r.lon]).setContent(el).openOn(map);
+    // ao abrir uma seção o balão cresce: reposiciona o mapa para mantê-lo inteiro na tela
+    el.addEventListener('toggle', () => pp.update(), true);
   };
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -366,12 +412,12 @@
     if (!circOn) vis.slice().sort((a, c) => c.ap - a.ap).forEach((r) => {
       L.circleMarker([r.lat, r.lon], { renderer: canvas, radius: raio(r), color: '#ffffff', weight: 1, fillColor: corDe(r), fillOpacity: 0.9 })
         .bindTooltip(`<div class="tt"><b>${esc(r.nm)}</b><br>${nf1.format(r.t)}% de abstenção · ${nf.format(r.rec)} recuperáveis</div>`)
-        .bindPopup(() => popup(r), { maxWidth: 320 })
+        .on('click', () => abrePopup(r))
         .addTo(pontos);
     });
     const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : ord === 'disputa' ? r.dis : ord === 'ganho' ? r.gan : ord === 'exlula' ? r.exl : r.rec);
     const top = vis.slice().sort((a, c) => val(c) - val(a)).slice(0, 25);
-    nota.textContent = vis.length ? `${nf.format(vis.length)} locais de votação visíveis. Os 25 primeiros:` : 'Carregando locais de votação…';
+    nota.textContent = vis.length ? `${nf.format(vis.length)} locais de votação visíveis. Os 25 com ${(document.getElementById('ord').selectedOptions[0]?.text || '').replace(/^Mais |^Maior /, (m) => (m === 'Maior ' ? 'maior ' : 'mais ')).toLowerCase()}:` : 'Carregando locais de votação…';
     lista.replaceChildren(...top.map((r) => {
       const li = document.createElement('li');
       const i = document.createElement('i'); i.style.background = corDe(r);
@@ -383,7 +429,7 @@
       v.textContent = ord === 'acima' ? `${r.t - r.e > 0 ? '+' : ''}${nf1.format(r.t - r.e)} p.p.` : nf.format(val(r));
       const sm = document.createElement('small'); sm.textContent = `${nf1.format(r.t)}% faltaram`; v.append(sm);
       li.append(i, t, v);
-      li.addEventListener('click', () => { map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 16)); setTimeout(() => L.popup({ maxWidth: 320 }).setLatLng([r.lat, r.lon]).setContent(popup(r)).openOn(map), 900); });
+      li.addEventListener('click', () => { map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 16)); setTimeout(() => abrePopup(r), 900); });
       return li;
     }));
   };
@@ -406,10 +452,53 @@
     }
   };
 
-  document.getElementById('modo').addEventListener('change', (e) => { modo = e.target.value; legenda(); desenha(); });
+  const VIEWS = {
+    mobilizar: { q: 'Onde mobilizar para Lula?', sub: 'Que escolas visitar e que grupo de ausentes trazer de volta', modo: 'quem', circ: 'ganho', ord: 'ganho',
+      ver: 'A cor mostra o grupo de ausentes que mais renderia votos para Lula em cada escola; cinza é onde trazer ausentes ajudaria Flávio. O tamanho do círculo mostra quantos votos dá para ganhar.',
+      agir: 'Comece pelos círculos maiores. Clique na escola para ver quem procurar e como abordar.' },
+    perdidos: { q: 'Onde Lula perdeu eleitores para a abstenção?', sub: 'Quem votava em 2022 e deixou de votar', modo: 'hist', circ: 'exlula', ord: 'exlula',
+      ver: 'A cor mostra como a abstenção mudou desde 2022: vermelho é onde cresceu. O tamanho mostra quantos ex-eleitores de Lula podem estar entre os novos ausentes (no máximo).',
+      agir: 'Vermelho com círculo grande é a melhor aposta: quem já votou em Lula e ficou em casa volta com mais facilidade.' },
+    persuadir: { q: 'Onde persuadir quem não votou em Lula?', sub: 'Eleitores de outros candidatos, brancos e nulos', modo: 'margem', circ: 'disputa', ord: 'disputa',
+      ver: 'A cor mostra quem venceu na escola e por quanto: azul é Lula, vermelho é Flávio, claro é disputa apertada. O tamanho mostra os votos em outros candidatos, brancos e nulos.',
+      agir: 'Priorize círculos grandes em cores claras: onde a disputa é equilibrada, cada voto convencido pesa mais.' },
+    motivos: { q: 'Por que as pessoas faltam aqui?', sub: 'O fator que mais eleva a abstenção em cada lugar', modo: 'motivo', circ: 'rec', ord: 'rec',
+      ver: 'A cor mostra o fator que mais eleva a abstenção na escola em relação à média do país. O tamanho mostra os ausentes que poderiam voltar (sem contar idosos de 70+).',
+      agir: 'Use para escolher a abordagem: cada motivo tem uma sugestão no detalhe da escola.' },
+    quanto: { q: 'Onde se faltou mais do que o esperado?', sub: 'Abstenção comparada ao perfil de quem vota ali', modo: 'acima', circ: 'todos', ord: 'acima',
+      ver: 'A cor compara a abstenção com o que o perfil do eleitorado prevê: vermelho é acima do esperado, azul é abaixo. O tamanho mostra ausentes mais brancos e nulos.',
+      agir: 'Vermelho indica fatores locais (política, mobilização, acesso) puxando a abstenção para cima.' },
+  };
+  let visao = 'mobilizar';
+  try { const v = localStorage.getItem('visao'); if (VIEWS[v]) visao = v; } catch (e) {}
+  const ordP = document.getElementById('ord-p'), ordH = document.getElementById('ord');
+  [...ordH.options].forEach((o) => ordP.append(new Option(o.text, o.value)));
+  const sincroniza = () => { document.getElementById('modo').value = modo; document.getElementById('circ').value = circ; ordP.value = ord; ordH.value = ord; document.getElementById('circ-on').checked = circOn; };
+  const desenhaPerguntas = () => {
+    const el = document.getElementById('perguntas');
+    el.replaceChildren(...Object.entries(VIEWS).map(([k, v]) => {
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', k === visao);
+      const t = document.createElement('b'); t.textContent = v.q; const sb = document.createElement('span'); sb.textContent = v.sub; b.append(t, sb);
+      b.addEventListener('click', () => aplicaVisao(k)); return b;
+    }));
+    const ex = document.getElementById('explica'), v = VIEWS[visao];
+    ex.hidden = !v; if (!v) return;
+    ex.innerHTML = `<p><span class="rot">O que você vê</span><br>${v.ver}</p><p><span class="rot">Como agir</span><br>${v.agir}</p>`;
+  };
+  const aplicaVisao = (k) => {
+    visao = k; const v = VIEWS[k]; modo = v.modo; circ = v.circ; ord = v.ord; circOn = true;
+    try { localStorage.setItem('visao', k); } catch (e) {}
+    sincroniza(); desenhaPerguntas(); legenda(); desenha();
+  };
+  const personalizado = () => { visao = null; try { localStorage.removeItem('visao'); } catch (e) {} desenhaPerguntas(); };
+  ordP.addEventListener('change', (e) => { ord = e.target.value; ordH.value = ord; personalizado(); desenha(); });
+  document.getElementById('modo').addEventListener('change', (e) => { modo = e.target.value; personalizado(); legenda(); desenha(); });
   document.getElementById('ord').addEventListener('change', (e) => { ord = e.target.value; desenha(); });
-  document.getElementById('circ').addEventListener('change', (e) => { circ = e.target.value; const o = document.getElementById('ord'); if ([...o.options].some((x) => x.value === circ)) { o.value = circ; ord = circ; } desenha(); });
-  document.getElementById('circ-on').addEventListener('change', (e) => { circOn = e.target.checked; desenha(); });
+  document.getElementById('circ').addEventListener('change', (e) => { circ = e.target.value; if ([...ordH.options].some((x) => x.value === circ)) { ord = circ; } sincroniza(); personalizado(); desenha(); });
+  document.getElementById('circ-on').addEventListener('change', (e) => { circOn = e.target.checked; personalizado(); desenha(); });
+  // dica de primeira visita
+  try { if (!localStorage.getItem('dica-ok')) document.getElementById('dica').hidden = false; } catch (e) { document.getElementById('dica').hidden = false; }
+  document.getElementById('dica-ok').addEventListener('click', () => { document.getElementById('dica').hidden = true; try { localStorage.setItem('dica-ok', '1'); } catch (e) {} });
   map.on('moveend zoomend', desenha);
 
   // busca: município, depois local de votação já carregado, depois endereço (Nominatim/OpenStreetMap)
@@ -471,7 +560,7 @@
   cidUf.addEventListener('change', desenhaCidades);
   document.getElementById('cid-ord').addEventListener('change', desenhaCidades);
 
-  legenda(); desenha();
+  aplicaVisao(visao);
 })();
 </script>
 </body>
