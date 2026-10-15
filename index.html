@@ -86,6 +86,7 @@
     <select id="modo">
       <option value="motivo">Motivo provável</option>
       <option value="quem">Quem mobilizar (saldo para Lula)</option>
+      <option value="hist">Abstenção desde 2022</option>
       <option value="taxa">Taxa de abstenção</option>
       <option value="acima">Acima do esperado</option>
       <option value="rec">Ausentes recuperáveis</option>
@@ -94,6 +95,8 @@
     <label class="note" for="circ-on" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="circ-on" checked> Círculos</label>
     <select id="circ" aria-label="O que os círculos medem">
       <option value="ganho">Votos a ganhar para Lula (mobilizando)</option>
+      <option value="exlula">Ex-eleitores de Lula ausentes (teto)</option>
+      <option value="novos">Ausentes novos desde 2022</option>
       <option value="rec">Ausentes recuperáveis</option>
       <option value="saldo">Saldo potencial para Lula</option>
       <option value="todos">Ausentes + brancos e nulos</option>
@@ -116,6 +119,7 @@
         <label class="note" for="cid-ord">Ordenar</label>
         <select id="cid-ord">
           <option value="gan">Votos a ganhar mobilizando</option>
+          <option value="exl">Ex-eleitores de Lula ausentes (teto)</option>
           <option value="int">Votos a ganhar por mil eleitores</option>
           <option value="dis">Votos a disputar</option>
         </select>
@@ -139,6 +143,7 @@
       <label for="ord" class="note">Ordenar por </label>
       <select id="ord">
         <option value="ganho">Mais votos a ganhar para Lula</option>
+        <option value="exlula">Mais ex-eleitores de Lula ausentes</option>
         <option value="rec">Mais ausentes recuperáveis</option>
         <option value="acima">Mais acima do esperado</option>
         <option value="saldo">Maior saldo para Lula</option>
@@ -190,14 +195,15 @@
   const ESCALA = {
     motivo: { tit: 'Motivo provável' },
     quem: { tit: 'Quem mobilizar para Lula' },
+    hist: { tit: 'Abstenção desde 2022' },
     taxa: { tit: 'Taxa de abstenção', f: (d) => seq(cl((d.t - 10) / 25)), a: '10%', b: '35% ou mais', r: seq },
     acima: { tit: 'Acima do esperado pelo perfil', f: (d) => div(cl((d.t - d.e + 6) / 12)), a: '6 p.p. abaixo', b: '6 p.p. acima', r: div },
     rec: { tit: 'Ausentes recuperáveis', f: (d) => seq(cl(Math.log10(Math.max(d.rec, 1)) / (d.isMun ? 5 : 3))), a: 'poucos', b: 'muitos', r: seq },
     dist: { tit: 'Distância média até o local', f: (d) => (d.dist == null ? '#9a9990' : seq(cl(Math.log(Math.max(d.dist, 0.2) / 0.2) / Math.log(25)))), a: '0,2 km', b: '5 km ou mais', r: seq },
   };
   let modo = 'motivo', ord = 'ganho', circ = 'ganho', circOn = true;
-  const CIRC = { rec: 'ausentes recuperáveis', saldo: 'saldo potencial para Lula', todos: 'ausentes + brancos e nulos', disputa: 'votos a disputar', ganho: 'votos a ganhar mobilizando' };
-  const valor = (d, k) => (k === 'saldo' ? d.saldo : k === 'todos' ? d.ab + d.bnq : k === 'disputa' ? d.dis : k === 'ganho' ? d.gan : d.rec);
+  const CIRC = { rec: 'ausentes recuperáveis', saldo: 'saldo potencial para Lula', todos: 'ausentes + brancos e nulos', disputa: 'votos a disputar', ganho: 'votos a ganhar mobilizando', exlula: 'ex-eleitores de Lula ausentes (teto)', novos: 'ausentes novos desde 2022' };
+  const valor = (d, k) => (k === 'saldo' ? d.saldo : k === 'todos' ? d.ab + d.bnq : k === 'disputa' ? d.dis : k === 'ganho' ? d.gan : k === 'exlula' ? d.exl : k === 'novos' ? d.nov : d.rec);
   // segmentos dos ausentes recuperáveis: quantos são e quanto saldo para Lula renderia trazê-los (margem por perfil da
   // pesquisa Datafolha de 6-7/10, ajustada ao resultado do próprio local)
   const SEGS = {
@@ -206,11 +212,21 @@
     adulto: ['Adultos de 30 a 69', '#2a78d6', 'Lembrete e porta a porta pelas redes do bairro: igreja, trabalho, vizinhos.'],
     nenhum: ['Trazer ausentes favorece Flávio', '#9a9990', 'Aqui o foco é persuadir quem votou em terceiros, branco ou nulo, não mobilizar ausentes.'],
   };
+  // histórico: variação ajustada (p.p., já descontada a mudança de perfil e o acaso) e abstenção de 2022
+  const HIST = {
+    nova: ['Falta nova (cresceu desde 2022)', '#e34948', 'Gente que votava em 2022 e deixou de votar. Prioridade: quem votou antes volta com mais facilidade.'],
+    cronica: ['Falta crônica (já era alta em 2022)', '#eda100', 'Abstenção alta nas duas eleições: mais estrutural, mais difícil de reverter.'],
+    queda: ['Abstenção caiu desde 2022', '#1baf7a', 'Já se vota mais do que em 2022.'],
+    estavel: ['Estável', '#9a9990', 'Sem mudança relevante desde 2022.'],
+    sem: ['Sem histórico comparável', '#d6d5cf', 'Local novo ou que mudou de código e de lugar desde 2022.'],
+  };
+  const T22M = 20.8;
+  const classe = (d) => (d.hc ? d.hc : d.hd == null ? 'sem' : d.hd >= 1.5 ? 'nova' : d.hd <= -1.5 ? 'queda' : d.t22 >= T22M + 3 ? 'cronica' : 'estavel');
   const quem = (d) => { const z = { jovem: d.zj, baixa: d.zb, adulto: d.za }; const k = Object.keys(z).reduce((a, b) => (z[b] > z[a] ? b : a)); return z[k] > 0 ? k : 'nenhum'; };
   // área proporcional ao valor: raio = k·√valor; a área dobra a cada nível de zoom (raio ×√2)
   const escalaK = () => { const z = map.getZoom(); return z < Z_LOCAIS ? 0.03 * Math.pow(2, (z - 4.5) / 2) : 0.28 * Math.pow(2, (Math.min(z, 13) - 10) / 2); };
   const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const corDe = (d) => (modo === 'motivo' ? cor(d.dom) : modo === 'quem' ? SEGS[quem(d)][1] : ESCALA[modo].f(d));
+  const corDe = (d) => (modo === 'motivo' ? cor(d.dom) : modo === 'quem' ? SEGS[quem(d)][1] : modo === 'hist' ? HIST[classe(d)][1] : ESCALA[modo].f(d));
 
   // mapa base: OpenStreetMap, estilo Humanitarian (HOT), servido pela OSM France: ruas e bairros com nome
   const map = L.map('map', { preferCanvas: true, zoomSnap: 0.5 }).setView([-14.5, -52], 4.5);
@@ -298,7 +314,8 @@
   window.__locais = (uf, c) => {
     const rows = c.nr.map((_, i) => ({ uf, mun: c.mun[i], mn: c.mn[i], z: c.z[i], nm: c.nm[i], end: c.end[i], lat: c.lat[i], lon: c.lon[i], ap: c.ap[i], ab: c.ab[i],
       t: c.t[i], e: c.e[i], rec: c.rec[i], l: c.l[i], f: c.f[i], bn: c.bn[i], dom: c.dom[i], dist: c.dist[i], ca: c.ca ? c.ca[i] : 0,
-      sj: c.sj[i], sb: c.sb[i], sa: c.sa[i], si: c.si[i], zj: c.zj[i], zb: c.zb[i], za: c.za[i], saj: c.saj[i], dis: c.dis[i], ter: c.ter[i], gan: c.gan ? c.gan[i] : 0 }));
+      sj: c.sj[i], sb: c.sb[i], sa: c.sa[i], si: c.si[i], zj: c.zj[i], zb: c.zb[i], za: c.za[i], saj: c.saj[i], dis: c.dis[i], ter: c.ter[i], gan: c.gan ? c.gan[i] : 0,
+      t22: c.t22 ? c.t22[i] : null, l22: c.l22 ? c.l22[i] : null, hd: c.hd ? c.hd[i] : null, hc: c.hc ? c.hc[i] : null, nov: c.nov ? c.nov[i] : 0, exl: c.exl ? c.exl[i] : 0, r2t: c.r2t ? c.r2t[i] : null }));
     const amax = Math.max(...rows.map((r) => r.ap));
     rows.forEach((r) => { r.rel = Math.sqrt(r.ap / amax); r.saldo = r.saj; r.bnq = Math.round(r.bn / 100 * (r.ap - r.ab)); });
     carregados[uf] = rows; todos = Object.values(carregados).flat();
@@ -323,6 +340,7 @@
       <table class="segt"><tr><th>Ausentes recuperáveis</th><th>pessoas</th><th>saldo Lula</th></tr>
       ${['jovem', 'baixa', 'adulto'].map((k) => { const n = r['s' + k[0]], z = r['z' + k[0]]; return `<tr><td><i style="background:${SEGS[k][1]}"></i>${SEGS[k][0]}</td><td>${nf.format(n)}</td><td class="${z > 0 ? 'pos' : z < 0 ? 'neg' : ''}">${z > 0 ? '+' : ''}${nf.format(z)}</td></tr>`; }).join('')}
       <tr><td class="muted">Idosos 70+ (difícil trazer)</td><td class="muted">${nf.format(r.si)}</td><td></td></tr></table>
+      ${r.t22 == null ? '<p class="acao"><b>2022:</b> sem histórico comparável para este local.</p>' : `<p class="acao"><b>Desde 2022:</b> abstenção ${nf1.format(r.t22)}% → ${nf1.format(r.t)}% (Lula tinha ${nf1.format(r.l22)}% em 2022). Variação descontado o perfil e o acaso: ${r.hd > 0 ? '+' : ''}${nf1.format(r.hd)} p.p. · <i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HIST[classe(r)][1]}"></i> ${HIST[classe(r)][0]}.<br>Ausentes novos: ${nf.format(r.nov)} · ex-eleitores de Lula ausentes (teto): ${nf.format(r.exl)}${r.r2t == null ? '' : ` · no 2º turno de 2022 a abstenção ${r.r2t < 0 ? 'caiu' : 'subiu'} ${nf1.format(Math.abs(r.r2t))} p.p.`}</p>`}
       <p class="acao"><b>Votos a ganhar mobilizando:</b> ${nf.format(r.gan)} (soma dos grupos com saldo positivo)</p>
       <p class="acao"><b>Quem mobilizar:</b> ${SEGS[quem(r)][0]}. ${SEGS[quem(r)][2]}</p>
       <p class="acao"><b>Votos a disputar:</b> ${nf.format(r.dis)} (${nf.format(r.ter)} em outros candidatos, ${nf.format(r.dis - r.ter)} brancos e nulos)</p>
@@ -351,7 +369,7 @@
         .bindPopup(() => popup(r), { maxWidth: 320 })
         .addTo(pontos);
     });
-    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : ord === 'disputa' ? r.dis : ord === 'ganho' ? r.gan : r.rec);
+    const val = (r) => (ord === 'acima' ? r.t - r.e : ord === 'saldo' ? r.saldo : ord === 'todos' ? r.ab + r.bnq : ord === 'disputa' ? r.dis : ord === 'ganho' ? r.gan : ord === 'exlula' ? r.exl : r.rec);
     const top = vis.slice().sort((a, c) => val(c) - val(a)).slice(0, 25);
     nota.textContent = vis.length ? `${nf.format(vis.length)} locais de votação visíveis. Os 25 primeiros:` : 'Carregando locais de votação…';
     lista.replaceChildren(...top.map((r) => {
@@ -373,7 +391,10 @@
   const legenda = () => {
     document.getElementById('leg-tit').textContent = ESCALA[modo].tit;
     const el = document.getElementById('legenda'); el.replaceChildren();
-    if (modo === 'quem') {
+    if (modo === 'hist') {
+      ['nova', 'cronica', 'queda', 'estavel', 'sem'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = HIST[k][1]; const t = document.createElement('b'); t.style.fontWeight = 500; t.textContent = HIST[k][0]; const d = document.createElement('small'); d.textContent = HIST[k][2]; s.append(i, t, d); el.append(s); });
+      const n = document.createElement('small'); n.style.color = 'var(--muted)'; n.textContent = 'Variação da abstenção de 2022 para 2026 (1º turno), descontado o efeito do envelhecimento do eleitorado e o acaso dos locais pequenos. Nova: +1,5 ponto ou mais; em queda: −1,5 ou menos; crônica: estável e já alta em 2022.'; el.append(n);
+    } else if (modo === 'quem') {
       ['jovem', 'baixa', 'adulto', 'nenhum'].forEach((k) => { const s = document.createElement('span'); const i = document.createElement('i'); i.style.background = SEGS[k][1]; const t = document.createElement('b'); t.style.fontWeight = 500; t.textContent = SEGS[k][0]; const d = document.createElement('small'); d.textContent = SEGS[k][2]; s.append(i, t, d); el.append(s); });
       const n = document.createElement('small'); n.style.color = 'var(--muted)'; n.textContent = 'Cor = o grupo de ausentes que, se votasse, daria mais saldo para Lula ali (inclinação de cada perfil pela pesquisa Datafolha de 6-7/10, ajustada ao resultado do local).'; el.append(n);
     } else if (modo === 'motivo') {
@@ -419,7 +440,7 @@
   const SEGN = ['jovens', 'baixa escolaridade', 'adultos'];
   const desenhaCidades = () => {
     const uf = cidUf.value, o = document.getElementById('cid-ord').value;
-    const v = (m) => (o === 'dis' ? m.dis : o === 'int' ? (m.ap ? 1000 * m.gan / m.ap : 0) : m.gan);
+    const v = (m) => (o === 'dis' ? m.dis : o === 'exl' ? (m.exl || 0) : o === 'int' ? (m.ap ? 1000 * m.gan / m.ap : 0) : m.gan);
     const rows = listaMun.filter((m) => (!uf || m.uf === uf) && (o !== 'int' || m.ap >= 20000)).sort((a, b) => v(b) - v(a)).slice(0, 60);
     const vmax = rows.length ? v(rows[0]) : 1;
     document.getElementById('cid-lista').replaceChildren(...rows.map((m, i) => {
@@ -429,12 +450,12 @@
       const a = document.createElement('div'); a.className = 'nm'; a.textContent = `${m.n} · ${m.uf}`;
       const k = m.gseg.indexOf(Math.max(...m.gseg));
       const sub = document.createElement('div'); sub.className = 'sub';
-      sub.textContent = `Lula ${nf1.format(m.l)}% · Flávio ${nf1.format(m.f)}% · a disputar ${nf.format(m.dis)}` + (m.gan > 0 ? ` · grupo principal: ${SEGN[k]}` : ' · mobilizar ajuda Flávio');
+      sub.textContent = `Lula ${nf1.format(m.l)}% · Flávio ${nf1.format(m.f)}% · a disputar ${nf.format(m.dis)}` + (m.gan > 0 ? ` · grupo principal: ${SEGN[k]}` : ' · mobilizar ajuda Flávio') + (m.t22 == null ? '' : ` · abstenção 2022→2026: ${nf1.format(m.t22)}% → ${nf1.format(m.t)}%`);
       const bar = document.createElement('div'); bar.className = 'bar'; bar.style.width = `${Math.max(2, 100 * v(m) / vmax)}%`;
       t.append(a, sub, bar);
       const val = document.createElement('div'); val.className = 'val';
       val.textContent = o === 'int' ? nf1.format(v(m)) : nf.format(v(m));
-      const sm = document.createElement('small'); sm.textContent = o === 'dis' ? 'a disputar' : o === 'int' ? 'por mil eleitores' : 'votos a ganhar'; val.append(sm);
+      const sm = document.createElement('small'); sm.textContent = o === 'dis' ? 'a disputar' : o === 'exl' ? 'ex-eleitores de Lula' : o === 'int' ? 'por mil eleitores' : 'votos a ganhar'; val.append(sm);
       li.append(rk, t, val);
       li.addEventListener('click', () => { const l = munPorIbge[m.ib]; if (l) map.fitBounds(l.getBounds(), { maxZoom: 13 }); });
       return li;
